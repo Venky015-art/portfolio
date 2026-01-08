@@ -1,3 +1,25 @@
+// Minimal JS to demonstrate projects rendering
+const projects = [
+  { title: 'Project Alpha', desc: 'A short description of Project Alpha.' },
+  { title: 'Project Beta', desc: 'A short description of Project Beta.' },
+  { title: 'Project Gamma', desc: 'A short description of Project Gamma.' }
+];
+
+function renderProjects() {
+  const el = document.getElementById('projects');
+  if (!el) return;
+  el.innerHTML = '';
+  projects.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'project';
+    d.innerHTML = `<h4>${p.title}</h4><p>${p.desc}</p>`;
+    el.appendChild(d);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderProjects();
+});
 // Mobile menu toggle
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');

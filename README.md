@@ -1,4 +1,24 @@
-# Portfolio To‑Do App
+# Venky015-art — Portfolio (Fresh Start)
+
+This repository now contains a minimal portfolio starter site.
+
+Files included:
+- `index.html` — root page for the portfolio
+- `styles.css` — minimal styling
+- `script.js` — tiny script that renders example projects
+
+Run locally:
+
+PowerShell (simple static server using Node's http-server):
+```powershell
+npx http-server -c-1 -p 8000
+# then open http://localhost:8000
+```
+
+Deploy:
+- Push to GitHub and use GitHub Pages, or connect this repository to Netlify/Vercel.
+
+Replace placeholder content in `index.html`, `styles.css`, and `script.js` with your real portfolio content.# Portfolio To‑Do App
 
 This folder contains a small To‑Do web app integrated into the portfolio site (`todo.html`). It is mobile-first and optimized for Android as a Progressive Web App (PWA).
 
