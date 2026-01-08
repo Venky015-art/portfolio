@@ -1,0 +1,10 @@
+[build]
+  # Publish the repository root (static site with index.html at repo root)
+  publish = "."
+
+# Single Page App redirect: send all 404s to index.html so client routing works
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
