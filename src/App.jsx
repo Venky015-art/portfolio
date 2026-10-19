@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { subjects, resources, questions, officialLinks, noteKinds, pyqYears, pyqPaperSets, pyqPdfUrl } from './data/study';
 import { noteMaterials } from './data/notes';
 import { generateMockQuestionSet } from './data/mockTests';
-import { firebaseConfigured, getFirebaseAuth } from './firebase';
-import { loadProgress, saveProgress } from './data/progressSync';
 
 const NAV_GROUPS = [
   { label: 'Workspace', items: [{ id: 'home', label: 'Overview', icon: 'grid' }, { id: 'syllabus', label: 'Syllabus', icon: 'book' }, { id: 'notes', label: 'Free notes', icon: 'file' }, { id: 'resources', label: 'Video library', icon: 'play' }] },
@@ -26,24 +24,8 @@ const INITIAL_STATE = {
 
 const GUEST_STORAGE_KEY = 'ece-hub-state:guest';
 
-function getUserStorageKey(userId) {
-  return `ece-hub-state:user:${userId}`;
-}
-
 function normalizeSavedState(state) {
   return { ...INITIAL_STATE, ...state };
-}
-
-function hasMeaningfulProgress(state) {
-  return state.studiedMinutes > 0
-    || state.studySessions.length > 0
-    || state.completedSubjects.length > 0
-    || state.bookmarks.length > 0
-    || state.offlineNotes.length > 0
-    || state.answeredQuestions.length > 0
-    || state.tests.length > 0
-    || state.targetRank !== INITIAL_STATE.targetRank
-    || state.dailyGoal !== INITIAL_STATE.dailyGoal;
 }
 
 function dayKey(date) {
@@ -117,17 +99,12 @@ function Icon({ name, size = 18 }) {
 
 function usePersistentState() {
   const [state, setState] = useState(() => readSavedState(GUEST_STORAGE_KEY));
-  const [storageKey, setStorageKey] = useState(GUEST_STORAGE_KEY);
-  useEffect(() => { try { localStorage.setItem(storageKey, JSON.stringify(state)); } catch { /* Storage can be unavailable in private browsing. */ } }, [state, storageKey]);
-  return [state, setState, storageKey, setStorageKey];
+  useEffect(() => { try { localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(state)); } catch { /* Storage can be unavailable in private browsing. */ } }, [state]);
+  return [state, setState];
 }
 
 function App() {
-  const [saved, setSaved, , setStorageKey] = usePersistentState();
-  const [account, setAccount] = useState(null);
-  const [authReady, setAuthReady] = useState(!firebaseConfigured);
-  const [syncedUserId, setSyncedUserId] = useState(null);
-  const [accountOpen, setAccountOpen] = useState(false);
+  const [saved, setSaved] = usePersistentState();
   const [view, setView] = useState('home');
   const [selectedSubject, setSelectedSubject] = useState('maths');
   const [dark, setDark] = useState(readSavedTheme);
@@ -164,119 +141,6 @@ function App() {
     const timeout = window.setTimeout(() => setNotice(''), 2600);
     return () => window.clearTimeout(timeout);
   }, [notice]);
-  useEffect(() => {
-    if (!firebaseConfigured) {
-      setAuthReady(true);
-      return undefined;
-    }
-
-    let latestUserId = null;
-    let active = true;
-    let unsubscribe = () => {};
-    const connectAuth = async () => {
-      try {
-        const services = await getFirebaseAuth();
-        if (!active || !services) return;
-        unsubscribe = services.authApi.onAuthStateChanged(services.auth, async (nextAccount) => {
-          latestUserId = nextAccount?.uid || null;
-          setSyncedUserId(null);
-          setAuthReady(false);
-
-          if (!nextAccount) {
-            setAccount(null);
-            setSaved(readSavedState(GUEST_STORAGE_KEY));
-            setStorageKey(GUEST_STORAGE_KEY);
-            setAuthReady(true);
-            return;
-          }
-
-          const userKey = getUserStorageKey(nextAccount.uid);
-          try {
-            const cloudState = await loadProgress(nextAccount.uid);
-            if (latestUserId !== nextAccount.uid) return;
-
-            const localUserState = readSavedState(userKey);
-            const guestState = readSavedState(GUEST_STORAGE_KEY);
-            const restoredState = cloudState
-              ? normalizeSavedState(cloudState)
-              : hasMeaningfulProgress(localUserState) ? localUserState : guestState;
-
-            setSaved(restoredState);
-            setStorageKey(userKey);
-            if (!cloudState) await saveProgress(nextAccount.uid, restoredState);
-            if (latestUserId !== nextAccount.uid) return;
-            setAccount(nextAccount);
-            setSyncedUserId(nextAccount.uid);
-          } catch {
-            if (latestUserId !== nextAccount.uid) return;
-            const localUserState = readSavedState(userKey);
-            const guestState = readSavedState(GUEST_STORAGE_KEY);
-            setSaved(hasMeaningfulProgress(localUserState) ? localUserState : guestState);
-            setStorageKey(userKey);
-            setAccount(nextAccount);
-            setNotice('Signed in, but cloud sync is unavailable. Check your Firebase setup and connection.');
-          } finally {
-            if (latestUserId === nextAccount.uid) setAuthReady(true);
-          }
-        });
-      } catch {
-        if (active) {
-          setAuthReady(true);
-          setNotice('Firebase could not start. Check the project configuration and reload.');
-        }
-      }
-    };
-    connectAuth();
-
-    return () => {
-      active = false;
-      latestUserId = null;
-      unsubscribe();
-    };
-  }, []);
-  useEffect(() => {
-    if (!account || syncedUserId === account.uid) return undefined;
-    let cancelled = false;
-    const restoreCloudState = async () => {
-      try {
-        const cloudState = await loadProgress(account.uid);
-        if (cancelled) return;
-        const localUserState = readSavedState(getUserStorageKey(account.uid));
-        const guestState = readSavedState(GUEST_STORAGE_KEY);
-        const restoredState = cloudState
-          ? normalizeSavedState(cloudState)
-          : hasMeaningfulProgress(localUserState) ? localUserState : guestState;
-        if (!cloudState) await saveProgress(account.uid, restoredState);
-        if (cancelled) return;
-        setSaved(restoredState);
-        setSyncedUserId(account.uid);
-      } catch {
-        // Keep the device copy until the account can reach Firestore.
-      }
-    };
-    restoreCloudState();
-    window.addEventListener('online', restoreCloudState);
-    return () => {
-      cancelled = true;
-      window.removeEventListener('online', restoreCloudState);
-    };
-  }, [account, syncedUserId]);
-  useEffect(() => {
-    if (!account || syncedUserId !== account.uid) return undefined;
-    const sync = () => {
-      saveProgress(account.uid, saved).catch(() => {
-        setNotice('Progress is saved on this device. Cloud sync will retry after reconnecting.');
-      });
-    };
-    const timeout = window.setTimeout(() => {
-      sync();
-    }, 700);
-    window.addEventListener('online', sync);
-    return () => {
-      window.clearTimeout(timeout);
-      window.removeEventListener('online', sync);
-    };
-  }, [account, saved, syncedUserId]);
 
   const subject = subjects.find((item) => item.id === selectedSubject) || subjects[0];
   const navigate = (next) => { setView(next); setSidebarOpen(false); setModal(null); window.scrollTo({ top: 0, behavior: 'smooth' }); };
@@ -297,7 +161,7 @@ function App() {
 
   return (
     <div className={`app-shell ${dark ? 'theme-dark' : ''}`}>
-      <Sidebar view={view} onNavigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} saved={saved} account={account} cloudReady={Boolean(account && syncedUserId === account.uid)} onAccount={() => setAccountOpen(true)} onInstall={installPrompt ? async () => { await installPrompt.prompt(); setInstallPrompt(null); } : null} />
+      <Sidebar view={view} onNavigate={navigate} open={sidebarOpen} onClose={() => setSidebarOpen(false)} saved={saved} onInstall={installPrompt ? async () => { await installPrompt.prompt(); setInstallPrompt(null); } : null} />
       <main className="main-shell">
         <header className="topbar">
           <button className="mobile-menu icon-action" onClick={() => setSidebarOpen(true)} aria-label="Open menu"><Icon name="menu" /></button>
@@ -309,10 +173,6 @@ function App() {
           <div className="top-actions">
             <button className="icon-action theme-toggle" aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} onClick={() => setDark((current) => !current)}><Icon name={dark ? 'sun' : 'moon'} /></button>
             <button className="icon-action notification-action" aria-label="Notifications" onClick={() => setNotice('You’re all caught up. New GATE updates will appear here.')}><Icon name="bell" /><span /></button>
-            <button className={`user-chip ${account ? 'is-signed-in' : 'is-guest'}`} onClick={() => setAccountOpen(true)} aria-label={account ? 'Open account settings' : 'Sign in to sync your progress'}>
-              <span className="avatar">{account ? (account.email?.[0] || 'A').toUpperCase() : 'A'}</span>
-              <span className="user-greeting">{!authReady ? 'Restoring…' : account ? `Hey, ${account.email?.split('@')[0] || 'Aspirant'}` : 'Sign in'}</span>
-            </button>
           </div>
         </header>
 
@@ -330,139 +190,12 @@ function App() {
       </main>
       <MobileNav view={view} onNavigate={navigate} />
       {modal && <Modal modal={modal} saved={saved} onClose={() => setModal(null)} onStudyDone={(minutes) => { setSaved((current) => ({ ...current, studiedMinutes: current.studiedMinutes + minutes, studySessions: [...current.studySessions, { date: dayKey(new Date()), minutes }] })); setNotice(`${minutes} focused minutes added to your progress.`); setModal(null); }} onTestDone={(result) => { setSaved((current) => ({ ...current, tests: [result, ...current.tests].slice(0, 20), mockSetSequence: (current.mockSetSequence || 0) + 1, mockVariantCursor: (current.mockVariantCursor || 0) + result.total })); setModal({ type: 'result', result }); }} onNextTest={(test) => setModal({ type: 'test', test })} />}
-      {accountOpen && <AccountDialog account={account} cloudReady={Boolean(account && syncedUserId === account.uid)} onClose={() => setAccountOpen(false)} onNotice={setNotice} />}
       {notice && <div className="toast" role="status"><span className="toast-dot" />{notice}<button onClick={() => setNotice('')} aria-label="Dismiss"><Icon name="close" size={15} /></button></div>}
     </div>
   );
 }
 
-function accountErrorMessage(error) {
-  const messages = {
-    'auth/email-already-in-use': 'An account already uses this email. Sign in instead.',
-    'auth/invalid-email': 'Enter a valid email address.',
-    'auth/invalid-credential': 'Email or password is incorrect.',
-    'auth/user-not-found': 'No account was found for this email.',
-    'auth/wrong-password': 'Email or password is incorrect.',
-    'auth/weak-password': 'Choose a password with at least 8 characters.',
-    'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
-    'auth/network-request-failed': 'Could not connect. Check your internet connection and try again.',
-  };
-  return messages[error?.code] || 'Account request failed. Check your setup and try again.';
-}
-
-function AccountDialog({ account, cloudReady, onClose, onNotice }) {
-  const [mode, setMode] = useState('signin');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const submit = async (event) => {
-    event.preventDefault();
-    setError('');
-    setSuccess('');
-    if (mode === 'signup' && password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const services = await getFirebaseAuth();
-      if (!services) throw new Error('Firebase is not configured.');
-      if (mode === 'signup') {
-        await services.authApi.createUserWithEmailAndPassword(services.auth, email.trim(), password);
-      } else if (mode === 'reset') {
-        await services.authApi.sendPasswordResetEmail(services.auth, email.trim());
-        setSuccess('Password reset email sent. Check your inbox.');
-        setBusy(false);
-        return;
-      } else {
-        await services.authApi.signInWithEmailAndPassword(services.auth, email.trim(), password);
-      }
-      onNotice(mode === 'signup' ? 'Account created. Your progress will sync to the cloud.' : 'Signed in. Restoring your saved progress.');
-      onClose();
-    } catch (authError) {
-      setError(accountErrorMessage(authError));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const signOut = async () => {
-    setBusy(true);
-    try {
-      const services = await getFirebaseAuth();
-      if (!services) throw new Error('Firebase is not configured.');
-      await services.authApi.signOut(services.auth);
-      onNotice('Signed out. Your guest progress stays on this device.');
-      onClose();
-    } catch (authError) {
-      setError(accountErrorMessage(authError));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="modal account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title">
-      <div className="modal-top"><span className="modal-brand"><i>ECE</i> YOUR STUDY ACCOUNT</span><button className="icon-action" onClick={onClose} aria-label="Close"><Icon name="close" /></button></div>
-      {account ? <div className="account-dialog-body">
-        <span className="account-mark"><Icon name="check" size={21} /></span>
-        <p className="eyebrow">ACCOUNT CONNECTED</p>
-        <h2 id="account-title">Your preparation is synced</h2>
-        <p className="account-description">Signed in as <strong>{account.email}</strong>. {cloudReady ? 'Your study sessions, completed subjects, bookmarks, goals, and mock results are saved to this account.' : 'Your device copy is safe. Cloud sync is waiting for a connection or the Firebase setup to be completed.'}</p>
-        <div className="account-sync-status"><span className="live-dot" /> {cloudReady ? 'Cloud sync is active' : 'Cloud sync is pending'}</div>
-        {error && <p className="auth-message error" role="alert">{error}</p>}
-        <div className="account-dialog-actions"><button className="button button-outline" onClick={onClose}>Keep studying</button><button className="button button-danger" disabled={busy} onClick={signOut}>{busy ? 'Signing out…' : 'Sign out'}</button></div>
-      </div> : !firebaseConfigured ? <div className="account-dialog-body">
-        <span className="account-mark"><Icon name="user" size={20} /></span>
-        <p className="eyebrow">ONE-TIME SETUP</p>
-        <h2 id="account-title">Save your prep across devices</h2>
-        <p className="account-description">Account sign-in uses Firebase Authentication, with study progress stored privately in Cloud Firestore. Set up Firebase once, then sign in from any device.</p>
-        <div className="auth-setup-note">
-          <h3>Enable sign-in and cloud sync</h3>
-          <ol>
-            <li>Create a project in the <a href="https://console.firebase.google.com/" target="_blank" rel="noreferrer">Firebase Console</a>, then add a Web app.</li>
-            <li>In <strong>Authentication → Sign-in method</strong>, enable <strong>Email/Password</strong>.</li>
-            <li>Create a <strong>Cloud Firestore</strong> database. Copy the rules from <code>firestore.rules</code> in this project into its Rules tab and publish them.</li>
-            <li>Copy the Web app's <code>apiKey</code>, <code>authDomain</code>, <code>projectId</code>, and <code>appId</code> into the <strong>Netlify project environment variables</strong>, using the names in <code>.env.example</code>.</li>
-            <li>Redeploy the site. The sign-in and create-account form will be available here.</li>
-          </ol>
-        </div>
-        <p className="auth-setup-footnote">For local development, copy <code>.env.example</code> to <code>.env.local</code> and fill in the same Firebase values.</p>
-      </div> : <div className="account-dialog-body">
-        <span className="account-mark"><Icon name="user" size={20} /></span>
-        <p className="eyebrow">{mode === 'signup' ? 'CREATE YOUR ACCOUNT' : mode === 'reset' ? 'RESET YOUR PASSWORD' : 'WELCOME BACK'}</p>
-        <h2 id="account-title">{mode === 'signup' ? 'Keep your progress with you' : mode === 'reset' ? 'Get back into your account' : 'Pick up where you left off'}</h2>
-        <p className="account-description">{mode === 'signup' ? 'Create a free account to sync your GATE ECE preparation across devices.' : mode === 'reset' ? 'We will email you a password reset link.' : 'Sign in to restore your study sessions, mock results, bookmarks, and plan.'}</p>
-        <form className="auth-form" onSubmit={submit}>
-          <label htmlFor="account-email">Email address</label>
-          <input id="account-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-          {mode !== 'reset' && <>
-            <label htmlFor="account-password">Password</label>
-            <input id="account-password" type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} required />
-          </>}
-          {mode === 'signup' && <>
-            <label htmlFor="account-password-confirm">Confirm password</label>
-            <input id="account-password-confirm" type="password" autoComplete="new-password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} required />
-          </>}
-          {error && <p className="auth-message error" role="alert">{error}</p>}
-          {success && <p className="auth-message success" role="status">{success}</p>}
-          <button className="button button-primary auth-submit" type="submit" disabled={busy}>{busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : mode === 'reset' ? 'Send reset link' : 'Sign in'} <Icon name="arrow" size={15} /></button>
-        </form>
-        <div className="auth-links">
-          {mode === 'signin' && <button className="text-link" onClick={() => { setMode('reset'); setError(''); setSuccess(''); }}>Forgot password?</button>}
-          {mode === 'reset' ? <button className="text-link" onClick={() => { setMode('signin'); setError(''); setSuccess(''); }}>Back to sign in</button> : <button className="text-link" onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(''); setSuccess(''); }}>{mode === 'signup' ? 'Already have an account? Sign in' : 'New here? Create an account'}</button>}
-        </div>
-        <p className="auth-privacy-note">Your progress is private to your account. Guest progress remains on this device.</p>
-      </div>}
-    </section>
-  </div>;
-}
-
-function Sidebar({ view, onNavigate, open, onClose, saved, account, cloudReady, onAccount, onInstall }) {
+function Sidebar({ view, onNavigate, open, onClose, saved, onInstall }) {
   return <><div className={`sidebar-scrim ${open ? 'is-visible' : ''}`} onClick={onClose} />
     <aside className={`sidebar ${open ? 'sidebar-open' : ''}`}>
       <button className="brand" onClick={() => onNavigate('home')}><span className="brand-mark"><span /><span /><span /><span /></span><span><strong>GATE ECE</strong><small>STUDY HUB</small></span></button>
@@ -471,7 +204,7 @@ function Sidebar({ view, onNavigate, open, onClose, saved, account, cloudReady, 
       <div className="sidebar-spacer" />
       <div className="offline-card"><div className="offline-icon"><Icon name="download" size={16} /></div><div><strong>Study anywhere</strong><span>{saved.offlineNotes.length ? `${saved.offlineNotes.length} note${saved.offlineNotes.length === 1 ? '' : 's'} saved offline` : 'Save notes for offline'}</span></div>{onInstall && <button onClick={onInstall} aria-label="Install app"><Icon name="arrow" size={15} /></button>}</div>
       <div className="sidebar-quote"><span>✳</span><p>Little progress each day adds up to big results.</p><small>YOUR STUDY COMPANION</small></div>
-      <div className="sidebar-bottom"><span className="user-mini">{account ? (account.email?.[0] || 'A').toUpperCase() : 'A'}</span><span className="sidebar-account-copy"><strong>{account?.email?.split('@')[0] || 'Guest session'}</strong><small>{account ? cloudReady ? 'Cloud sync active' : 'Cloud sync pending' : 'Progress saved on this device'}</small></span><button aria-label={account ? 'Open account settings' : 'Sign in to sync progress'} onClick={onAccount}>{account ? '···' : 'Sign in'}</button></div>
+      <div className="sidebar-bottom"><span className="sidebar-save-mark"><Icon name="check" size={15} /></span><span className="sidebar-status-copy"><strong>Local progress</strong><small>Saved on this device</small></span></div>
     </aside>
   </>;
 }
