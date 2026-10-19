@@ -49,22 +49,22 @@ export const noteKinds = [
 
 const youtube = (query) => `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 export const resources = [
-  { subject:'Engineering Mathematics', channel:'GATE Wallah English', brand:'pw', note:'GATE-focused concept lessons', url:youtube('GATE Wallah English Engineering Mathematics GATE') },
+  { subject:'Engineering Mathematics', channel:'GATE Wallah English', brand:'pw', note:'GATE-focused concept lessons', url:youtube('GATE Wallah English Engineering Mathematics GATE'), videoId:'tXVHu4Vz1SI', videoTitle:'Basic Single Variable Calculus · GATE' },
   { subject:'Engineering Mathematics', channel:'Unacademy GATE', brand:'unacademy', note:'Free topic-wise lectures', url:youtube('Unacademy GATE Engineering Mathematics English') },
   { subject:'Engineering Mathematics', channel:'Neso Academy', brand:'neso', note:'Clear engineering fundamentals', url:'https://www.youtube.com/@nesoacademy' },
-  { subject:'Digital Electronics', channel:'Neso Academy', brand:'neso', note:'Digital logic & circuit design', url:'https://www.youtube.com/@nesoacademy' },
+  { subject:'Digital Electronics', channel:'Neso Academy', brand:'neso', note:'Digital logic & circuit design', url:'https://www.youtube.com/@nesoacademy', videoId:'dg5a9G_ibdE', videoTitle:'GATE Solved Problems · Logic Gates' },
   { subject:'Digital Electronics', channel:'GATE Wallah English', brand:'pw', note:'GATE-focused concept lessons', url:youtube('GATE Wallah English Digital Electronics GATE') },
-  { subject:'Analog Electronics', channel:'All About Electronics', brand:'allabout', note:'Analog & device tutorials', url:'https://www.youtube.com/@ALLABOUTELECTRONICS' },
+  { subject:'Analog Electronics', channel:'All About Electronics', brand:'allabout', note:'Analog & device tutorials', url:'https://www.youtube.com/@ALLABOUTELECTRONICS', videoId:'kiiA6WTCQn0', videoTitle:'Introduction to Operational Amplifiers' },
   { subject:'Analog Electronics', channel:'Neso Academy', brand:'neso', note:'Circuit concepts & examples', url:'https://www.youtube.com/@nesoacademy' },
-  { subject:'Signals & Systems', channel:'NPTEL', brand:'nptel', note:'University-level course lectures', url:'https://www.youtube.com/@nptelhrd' },
+  { subject:'Signals & Systems', channel:'NPTEL', brand:'nptel', note:'University-level course lectures', url:'https://www.youtube.com/@nptelhrd', videoId:'0nZYen9w_eo', videoTitle:'Introduction to Signals & Systems' },
   { subject:'Signals & Systems', channel:'GATE Wallah English', brand:'pw', note:'GATE-focused concept lessons', url:youtube('GATE Wallah English Signals Systems GATE') },
-  { subject:'Communication Systems', channel:'NPTEL', brand:'nptel', note:'Communication systems courses', url:'https://www.youtube.com/@nptelhrd' },
+  { subject:'Communication Systems', channel:'NPTEL', brand:'nptel', note:'Communication systems courses', url:'https://www.youtube.com/@nptelhrd', videoId:'VkYlEaMcAtE', videoTitle:'Basics of Wireless Communication Systems' },
   { subject:'Communication Systems', channel:'All About Electronics', brand:'allabout', note:'Wireless & communication basics', url:'https://www.youtube.com/@ALLABOUTELECTRONICS' },
-  { subject:'Control Systems', channel:'NPTEL', brand:'nptel', note:'Control theory lecture series', url:'https://www.youtube.com/@nptelhrd' },
+  { subject:'Control Systems', channel:'NPTEL', brand:'nptel', note:'Control theory lecture series', url:'https://www.youtube.com/@nptelhrd', videoId:'RcuGxWc0HyQ', videoTitle:'Introduction to Control Systems · Part 1' },
   { subject:'Control Systems', channel:'GATE Academy', brand:'academy', note:'GATE-oriented practice lessons', url:youtube('GATE Academy Control Systems English') },
-  { subject:'Network Theory', channel:'Neso Academy', brand:'neso', note:'Network theorems & circuit analysis', url:'https://www.youtube.com/@nesoacademy' },
+  { subject:'Network Theory', channel:'Neso Academy', brand:'neso', note:'Network theorems & circuit analysis', url:'https://www.youtube.com/@nesoacademy', videoId:'NEhH6C7Fzw4', videoTitle:'Introduction to Network Theory' },
   { subject:'Network Theory', channel:'GATE Wallah English', brand:'pw', note:'GATE-focused concept lessons', url:youtube('GATE Wallah English Network Theory GATE') },
-  { subject:'Electronic Devices', channel:'All About Electronics', brand:'allabout', note:'Semiconductors & devices', url:'https://www.youtube.com/@ALLABOUTELECTRONICS' },
+  { subject:'Electronic Devices', channel:'All About Electronics', brand:'allabout', note:'Semiconductors & devices', url:'https://www.youtube.com/@ALLABOUTELECTRONICS', videoId:'l9LBIy9Ioxo', videoTitle:'Enhancement MOSFET · Construction & Operation' },
   { subject:'Electronic Devices', channel:'Neso Academy', brand:'neso', note:'Device physics & transistor basics', url:'https://www.youtube.com/@nesoacademy' },
 ];
 

@@ -180,7 +180,7 @@ function App() {
           {view === 'home' && <HomeView saved={saved} onNavigate={navigate} onStudy={startStudying} onSubject={openSubject} onNotice={setNotice} />}
           {view === 'syllabus' && <SyllabusView saved={saved} subject={subject} onSelect={setSelectedSubject} onComplete={markSubjectComplete} onStudy={startStudying} />}
           {view === 'notes' && <NotesView saved={saved} subject={subject} onSelect={setSelectedSubject} onRead={(kind) => setModal({ type: 'note', subject, kind })} onOffline={toggleOffline} onBookmark={toggleBookmark} />}
-          {view === 'resources' && <ResourcesView />}
+          {view === 'resources' && <ResourcesView onPlay={(video) => setModal({ type: 'video', video })} />}
           {view === 'pyq' && <PyqView saved={saved} initialQuery={query} onBookmark={toggleBookmark} onTest={startTest} />}
           {view === 'tests' && <TestsView saved={saved} onStart={startTest} />}
           {view === 'planner' && <PlannerView saved={saved} onTarget={setTarget} onDailyGoal={setDailyGoal} onNavigate={navigate} onSubject={(id) => openSubject(id,'syllabus')} />}
@@ -261,12 +261,39 @@ function NotesView({ saved, subject, onSelect, onRead, onOffline, onBookmark }) 
   </>;
 }
 
-function ResourcesView() {
-  const groups = [...new Set(resources.map((item)=>item.subject))];
+function getYouTubeVideo(input) {
+  try {
+    const url = new URL(input);
+    const host = url.hostname.toLowerCase();
+    if (!['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(host)) return null;
+    const videoId = host === 'youtu.be' ? url.pathname.split('/').filter(Boolean)[0] : url.searchParams.get('v') || url.pathname.match(/^\/(?:embed|shorts)\/([\w-]{11})/)?.[1];
+    if (videoId && /^[\w-]{11}$/.test(videoId)) return { id: videoId, kind: 'video', title: 'YouTube video', fallbackUrl: `https://www.youtube.com/watch?v=${videoId}` };
+    const playlistId = url.searchParams.get('list');
+    if (playlistId && /^[\w-]{10,128}$/.test(playlistId)) return { id: playlistId, kind: 'playlist', title: 'YouTube playlist', fallbackUrl: `https://www.youtube.com/playlist?list=${encodeURIComponent(playlistId)}` };
+  } catch { /* Invalid links are reported in the form. */ }
+  return null;
+}
+
+function ResourcesView({ onPlay }) {
+  const groups = [...new Set(resources.map((item) => item.subject))];
+  const [videoLink, setVideoLink] = useState('');
+  const [linkError, setLinkError] = useState('');
+  const submitLink = (event) => {
+    event.preventDefault();
+    const video = getYouTubeVideo(videoLink);
+    if (!video) { setLinkError('Paste a valid YouTube video or playlist URL.'); return; }
+    setLinkError('');
+    onPlay(video);
+  };
   return <><PageHeading eyebrow="THE GOOD STUFF, WITHOUT THE SCROLL" title="Learn from the best." copy="Free English resources from trusted creators, organised around your GATE ECE subjects." action={<span className="free-badge">✳ 100% FREE</span>} />
     <div className="resource-feature"><div className="resource-feature-orbit">▶</div><div><span className="eyebrow">YOUR FREE VIDEO LIBRARY</span><h2>Quality learning,<br/>without the noise.</h2><p>Hand-picked channels. Clear explanations. No paid-course detours.</p></div><div className="resource-stats"><span><strong>08</strong><small>SUBJECTS</small></span><i/><span><strong>06</strong><small>CHANNELS</small></span><i/><span><strong>FREE</strong><small>ALWAYS</small></span></div></div>
-    <div className="resource-subject-grid">{groups.map((group,index)=><article className="resource-card" key={group}><div className="resource-card-head"><span className={`resource-number rn-${index}`}>{String(index+1).padStart(2,'0')}</span><div><span className="eyebrow">SUBJECT {String(index+1).padStart(2,'0')}</span><h3>{group}</h3></div><span className="resource-count">{resources.filter((x)=>x.subject===group).length} channels</span></div><div className="channel-list">{resources.filter((x)=>x.subject===group).map((resource)=><a key={resource.channel} href={resource.url} target="_blank" rel="noreferrer" className="channel-row"><span className={`channel-avatar channel-${resource.brand}`}>{resource.channel.charAt(0)}</span><span><strong>{resource.channel}</strong><small>{resource.note}</small></span><span className="language-pill">EN</span><Icon name="external" size={14}/></a>)}</div><div className="resource-card-foot"><span><i className="verified-dot"/> ENGLISH · FREE TO WATCH</span><Icon name="play" size={14}/></div></article>)}</div>
-    <div className="resource-note"><span>ⓘ</span><p>Channels are linked to their official YouTube destinations. Video selection and availability are managed by each creator.</p></div>
+    <form className="resource-player-form" onSubmit={submitLink}>
+      <div className="resource-player-copy"><span className="eyebrow">WATCH WITHOUT LEAVING</span><strong>Play a YouTube video or playlist here</strong><small>Paste a link to keep studying in the hub.</small></div>
+      <div className="resource-player-input"><input type="url" value={videoLink} onChange={(event) => { setVideoLink(event.target.value); setLinkError(''); }} placeholder="https://youtube.com/watch?v=…" aria-label="YouTube video or playlist URL" aria-invalid={Boolean(linkError)} /><button className="button button-primary" type="submit"><Icon name="play" size={14}/> Play here</button></div>
+      {linkError && <span className="resource-player-error" role="alert">{linkError}</span>}
+    </form>
+    <div className="resource-subject-grid">{groups.map((group,index)=><article className="resource-card" key={group}><div className="resource-card-head"><span className={`resource-number rn-${index}`}>{String(index+1).padStart(2,'0')}</span><div><span className="eyebrow">SUBJECT {String(index+1).padStart(2,'0')}</span><h3>{group}</h3></div><span className="resource-count">{resources.filter((x)=>x.subject===group).length} channels</span></div><div className="channel-list">{resources.filter((x)=>x.subject===group).map((resource)=>resource.videoId ? <button key={resource.channel} type="button" className="channel-row channel-row-playable" onClick={()=>onPlay({id:resource.videoId,kind:'video',title:resource.videoTitle,channel:resource.channel,fallbackUrl:`https://www.youtube.com/watch?v=${resource.videoId}`})}><span className={`channel-avatar channel-${resource.brand}`}>{resource.channel.charAt(0)}</span><span><strong>{resource.channel}</strong><small>{resource.videoTitle}</small></span><span className="language-pill">EN</span><span className="watch-here-label"><Icon name="play" size={13}/> PLAY</span></button> : <a key={resource.channel} href={resource.url} target="_blank" rel="noreferrer" className="channel-row"><span className={`channel-avatar channel-${resource.brand}`}>{resource.channel.charAt(0)}</span><span><strong>{resource.channel}</strong><small>{resource.note}</small></span><span className="language-pill">EN</span><Icon name="external" size={14}/></a>)}</div><div className="resource-card-foot"><span><i className="verified-dot"/> ENGLISH · FREE TO WATCH</span><Icon name="play" size={14}/></div></article>)}</div>
+    <div className="resource-note"><span>ⓘ</span><p>Embedded playback is provided by YouTube. Some videos may require YouTube or have embedding disabled by the creator.</p></div>
   </>;
 }
 
@@ -347,11 +374,25 @@ function DailyQuestion({onNotice}) {
 function MobileNav({view,onNavigate}) { return <nav className="mobile-bottom-nav">{[{id:'home',label:'Home',icon:'grid'},{id:'syllabus',label:'Study',icon:'book'},{id:'pyq',label:'Practice',icon:'search'},{id:'progress',label:'Progress',icon:'chart'}].map((item)=><button key={item.id} className={(view===item.id||(item.id==='pyq'&&view==='tests'))?'active':''} onClick={()=>onNavigate(item.id)}><Icon name={item.icon} size={18}/><span>{item.label}</span></button>)}</nav>; }
 
 function Modal({ modal, saved, onClose, onStudyDone, onTestDone, onNextTest }) {
+  if (modal.type==='video') return <VideoModal video={modal.video} onClose={onClose} />;
   if (modal.type==='note') return <PopulatedNoteModal {...modal} saved={saved} onClose={onClose} />;
   if (modal.type==='study') return <StudyModal subject={subjects.find((item)=>item.id===modal.subjectId)||subjects[0]} onClose={onClose} onDone={onStudyDone}/>;
   if (modal.type==='test') return <TestModal modal={modal} saved={saved} onClose={onClose} onDone={onTestDone}/>;
   if (modal.type==='result') return <ResultModal result={modal.result} onClose={onClose} onNextTest={onNextTest}/>;
   return null;
+}
+
+function VideoModal({ video, onClose }) {
+  useEffect(() => {
+    const closeOnEscape = (event) => { if (event.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+  const isPlaylist = video.kind === 'playlist';
+  const embedUrl = isPlaylist
+    ? `https://www.youtube-nocookie.com/embed/videoseries?list=${encodeURIComponent(video.id)}&rel=0`
+    : `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.id)}?rel=0&playsinline=1`;
+  return <div className="modal-backdrop video-backdrop" onMouseDown={(event)=>{if(event.target===event.currentTarget)onClose();}}><section className="modal video-modal" role="dialog" aria-modal="true" aria-labelledby="video-title"><div className="modal-top"><span className="modal-brand"><i><Icon name="play" size={13}/></i> WATCH IN GATE ECE HUB</span><button className="icon-action" onClick={onClose} aria-label="Close video player"><Icon name="close"/></button></div><div className="video-player-frame"><iframe src={embedUrl} title={`${video.title || 'YouTube video'} — embedded player`} allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen loading="lazy" /></div><div className="video-modal-details"><div><span className="eyebrow">{video.channel || (isPlaylist ? 'YOUTUBE PLAYLIST' : 'YOUTUBE VIDEO')}</span><h2 id="video-title">{video.title || (isPlaylist ? 'Watch playlist' : 'Watch video')}</h2><p>Playback stays in this window. YouTube serves the video, so availability and ads follow the creator’s settings.</p></div><a className="button button-outline" href={video.fallbackUrl} target="_blank" rel="noreferrer">Open on YouTube <Icon name="external" size={13}/></a></div></section></div>;
 }
 
 function PopulatedNoteModal({subject,kind,saved,onClose}) {
