@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
   font-family: 'DM Sans', sans-serif;
@@ -13,8 +12,8 @@
   --sidebar: #fcfdfb;
   --ink: #202b30;
   --ink-strong: #172125;
-  --muted: #87918f;
-  --muted-2: #a8b0ad;
+  --muted: #5f6c65;
+  --muted-2: #6b7770;
   --line: #e9edeb;
   --line-strong: #dfe6e2;
   --green: #4a765e;
@@ -40,8 +39,8 @@
   --sidebar: #151f1c;
   --ink: #d6dfdb;
   --ink-strong: #f2f5f3;
-  --muted: #9baaa3;
-  --muted-2: #74837c;
+  --muted: #adbbb3;
+  --muted-2: #a1afa7;
   --line: #293833;
   --line-strong: #35473f;
   --green: #8ab59b;
@@ -654,4 +653,57 @@ button:disabled { cursor: not-allowed; opacity: .45; }
   .account-dialog-body h2 { font-size:19px; }
   .auth-setup-note ol { gap:7px; }
   .account-dialog-actions > .button { flex:1; }
+}
+
+
+/* Readability and theme refinements */
+:root { color-scheme: light; }
+:root[data-theme='dark'] { color-scheme: dark; }
+html { -webkit-text-size-adjust: 100%; }
+.brand small, .nav-group-label, .exam-chip { font-size: 9px; }
+.side-nav-item { font-size: 13px; }
+.offline-card strong, .sidebar-bottom strong { font-size: 11px; }
+.offline-card div:nth-child(2) span, .sidebar-bottom small { font-size: 10px; }
+.global-search input { font-size: 12px; }
+.user-chip { font-size: 11px; }
+.app-footer { font-size: 10px; }
+.welcome-line { font-size: 10px; }
+.hero-label { font-size: 10px; }
+.hero-copy-block > p { font-size: 12px; line-height: 1.65; }
+.button { font-size: 11px; }
+.hero-trust { font-size: 9px; }
+.stat-main span { font-size: 10px; }
+.stat-main small { font-size: 9px; }
+.eyebrow { font-size: 9px; }
+.text-link { font-size: 10px; }
+.subject-kicker { font-size: 8px; }
+.continue-copy small, .shortcut-progress { font-size: 9px; }
+.subject-shortcuts button { font-size: 9px; }
+.date-stamp span, .question-meta span { font-size: 8px; }
+.daily-question { font-size: 12px; }
+.daily-option { font-size: 9px; }
+.daily-feedback, .answer-hint { font-size: 8px; }
+.progress-ring small { font-size: 7px; }
+.syllabus-overview > div:last-child > strong { font-size: 10px; }
+.syllabus-overview p { font-size: 9px; }
+.subject-mini-grid button, .subject-mini-grid small { font-size: 8px; }
+.update-row strong { font-size: 9px; }
+.update-row small { font-size: 8px; }
+.video-strip p:last-child { font-size: 9px; }
+.heading-copy { font-size: 12px; }
+.official-callout strong { font-size: 10px; }
+.official-callout p { font-size: 9px; }
+.list-card-head, .subject-row-percent { font-size: 9px; }
+.subject-row-info strong { font-size: 10px; }
+.subject-row-info small { font-size: 8px; }
+.subject-detail-banner p { font-size: 10px; }
+.topic-row, .filter-chip { font-size: 9px; }
+.notes-subject-head p, .note-card > p, .offline-note-banner p { font-size: 9px; }
+.note-card-actions .button, .offline-save { font-size: 9px; }
+.channel-row strong { font-size: 9px; }
+.channel-row small, .resource-count { font-size: 8px; }
+@media (max-width: 480px) {
+  .hero-copy-block > p { font-size: 11px; }
+  .hero-trust { font-size: 8px; }
+  .app-footer { font-size: 9px; }
 }
