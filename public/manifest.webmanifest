@@ -1,0 +1,17 @@
+{
+  "name": "GATE ECE Hub — Free GATE 2027 Preparation",
+  "short_name": "ECE Hub",
+  "description": "A free, focused study companion for GATE ECE preparation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8f7",
+  "theme_color": "#f7f8f7",
+  "icons": [
+    {
+      "src": "/icons/ece-mark.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
