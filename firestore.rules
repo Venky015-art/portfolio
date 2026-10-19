@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId}/progress/{documentId} {
+      allow read: if request.auth != null
+        && request.auth.uid == userId
+        && documentId == 'current';
+
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && documentId == 'current'
+        && request.resource.data.keys().hasOnly(['state', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['state', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.state is map
+        && request.resource.data.state.keys().hasOnly([
+          'studiedMinutes', 'studySessions', 'completedSubjects', 'bookmarks',
+          'offlineNotes', 'answeredQuestions', 'tests', 'mockSetSequence',
+          'mockVariantCursor', 'targetRank', 'dailyGoal'
+        ])
+        && request.resource.data.state.keys().hasAll([
+          'studiedMinutes', 'studySessions', 'completedSubjects', 'bookmarks',
+          'offlineNotes', 'answeredQuestions', 'tests', 'mockSetSequence',
+          'mockVariantCursor', 'targetRank', 'dailyGoal'
+        ])
+        && request.resource.data.state.studiedMinutes is number
+        && request.resource.data.state.studySessions is list
+        && request.resource.data.state.completedSubjects is list
+        && request.resource.data.state.bookmarks is list
+        && request.resource.data.state.offlineNotes is list
+        && request.resource.data.state.answeredQuestions is list
+        && request.resource.data.state.tests is list
+        && request.resource.data.state.mockSetSequence is number
+        && request.resource.data.state.mockVariantCursor is number
+        && request.resource.data.state.targetRank is string
+        && request.resource.data.state.dailyGoal is number;
+
+      allow delete: if false;
+    }
+  }
+}
